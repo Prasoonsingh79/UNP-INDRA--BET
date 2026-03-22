@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  username     String        @unique
+  password     String
+  coins        Float         @default(1000)
+  createdAt    DateTime      @default(now())
+  betsCreated  Bet[]         @relation("BetCreator")
+  participations Participation[]
+}
+
+model Bet {
+  id           Int           @id @default(autoincrement())
+  title        String
+  creatorId    Int?
+  creator      User?         @relation("BetCreator", fields: [creatorId], references: [id])
+  entryAmount  Float
+  deadline     DateTime
+  status       String        @default("active") // "active", "resolved"
+  resultOptionId Int? // The winning option ID once resolved
+  createdAt    DateTime      @default(now())
+  
+  options      BetOption[]
+  participations Participation[]
+}
+
+model BetOption {
+  id      Int    @id @default(autoincrement())
+  betId   Int
+  bet     Bet    @relation(fields: [betId], references: [id], onDelete: Cascade)
+  text    String
+  
+  participations Participation[]
+}
+
+model Participation {
+  id       Int       @id @default(autoincrement())
+  userId   Int
+  user     User      @relation(fields: [userId], references: [id])
+  betId    Int
+  bet      Bet       @relation(fields: [betId], references: [id], onDelete: Cascade)
+  optionId Int
+  option   BetOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  amount   Float
+  joinedAt DateTime  @default(now())
+
+  @@unique([userId, betId]) // A user can join a bet only once
+}
